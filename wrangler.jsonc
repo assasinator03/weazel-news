@@ -1,0 +1,8 @@
+{
+  "name": "weazel-news",
+  "main": "src/worker.js",
+  "compatibility_date": "2025-09-01",
+  "keep_vars": true,
+  "assets": { "directory": "./public", "binding": "ASSETS", "run_worker_first": ["/api/*", "/auth/*"] },
+  "triggers": { "crons": ["0 6 * * *"] }
+}
