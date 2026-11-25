@@ -39,8 +39,12 @@ async fetch(req,env,ctx){const url=new URL(req.url),P=url.pathname,M=req.method;
  if(is('DELETE',/^\/api\/staff\/([^/]+)$/)){if(!ok('mgr'))return NO();const[t,e]=await tgt(decodeURIComponent(x[1]));if(e)return e;await kill(t.id);await db.del('staff','id='+eq(t.id));return J({ok:1})}
  if(is('PUT',/^\/api\/staff\/([^/]+)\/role$/)){if(!ok('boss'))return NO();const id=decodeURIComponent(x[1]),r=(await body()).role,t=(await db.get('staff',`id=${eq(id)}&select=role`))[0];if(!t||t.role==='boss'||!['copatron','journalist'].includes(r))return E('Impossible');await db.upd('staff','id='+eq(id),{role:r});return J({ok:1})}
  if(is('GET',/^\/api\/team$/)){const s=await db.get('staff','select=role,grade,nom,prenom');return J(s.map(m=>{const g=m.grade||(m.role==='boss'?'Patron':m.role==='copatron'?'Co-patron':'');return{name:[m.prenom,m.nom].filter(Boolean).join(' '),title:g,k:m.role==='boss'?99:m.role==='copatron'?98:GR.indexOf(g)}}).filter(m=>m.name&&m.title).sort((a,b)=>b.k-a.k).map(({name,title})=>({name,title})))}
- if(is('GET',/^\/api\/dir$/)){if(!ok('staff'))return NO();const m=MG.includes(u.role),r=await db.get('staff','select=id,role,grade,nom,prenom,tel&order=id.asc');return J({grades:GR,mgr:m,rows:r.map(s=>({...s,id:m?s.id:undefined}))})}
- if(is('PUT',/^\/api\/dir$/)){if(!ok('staff'))return NO();const b=await body();await db.upd('staff','id='+eq(u.id),{nom:S(b.nom,60),prenom:S(b.prenom,60),tel:S(b.tel,30)});return J({ok:1})}
+ if(is('GET',/^\/api\/dir$/)){if(!ok('staff'))return NO();const m=MG.includes(u.role),r=await db.get('staff','select=id,role,grade,nom,prenom,tel&order=id.asc');return J({grades:GR,mgr:m,rows:r.map(s=>({...s,own:s.id===u.id,id:m?s.id:undefined}))})}
+ if(is('PUT',/^\/api\/dir(?:\/([^/]+))?$/)){if(!ok('staff'))return NO();const id=x[1]?decodeURIComponent(x[1]):u.id,b=await body(),boss=u.role==='boss',row={};
+  if(!boss&&id!==u.id)return E('Tu ne peux modifier que ton propre numéro',403);
+  if(b.tel!==undefined)row.tel=S(b.tel,30);
+  if(boss){if(b.nom!==undefined)row.nom=S(b.nom,60);if(b.prenom!==undefined)row.prenom=S(b.prenom,60)}
+  if(!Object.keys(row).length)return J({ok:1});await db.upd('staff','id='+eq(id),row);return J({ok:1})}
  if(is('PUT',/^\/api\/grades\/([^/]+)$/)){if(!ok('mgr'))return NO();const g=S((await body()).grade);if(g&&!GR.includes(g))return E('Grade invalide');await db.upd('staff','id='+eq(decodeURIComponent(x[1])),{grade:g});return J({ok:1})}
  // ---- articles
  if(is('GET',/^\/api\/posts$/)){const t=url.searchParams.get('type'),L=Math.min(+url.searchParams.get('limit')||200,200);let qs=`select=id,type,kicker,title,sub,author,date,by:by_id${url.searchParams.get('nothumb')?'':',thumb'}&order=date.desc&limit=${L}`;if(TY.includes(t))qs+='&type='+eq(t);return J(await meta(db,await db.get('posts',qs)))}
