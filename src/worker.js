@@ -10,8 +10,11 @@ const sync=async(db,u)=>{await db.ins('readers',{id:u.id,name:u.name,avatar:u.av
 async function meta(db,ps){if(!ps.length)return ps;const ids='in.('+ps.map(p=>p.id).join(',')+')',[l,c]=await Promise.all([db.get('likes','select=post&post='+ids),db.get('comments','select=id,post,uid,user:uname,avatar,text,date&order=date.asc&post='+ids)]);return ps.map(p=>({...p,likes:l.filter(x=>x.post===p.id).length,comments:c.filter(x=>x.post===p.id)}))}
 const cz=(a,env)=>(Array.isArray(a)?a:[]).slice(0,80).map(z=>{z=z||{};const n=(v,lo,hi,d)=>Math.min(hi,Math.max(lo,Math.round(+v)||d)),o={k:['text','img','rule','box'].includes(z.k)?z.k:'text',x:n(z.x,0,1000,0),y:n(z.y,0,6000,0),w:n(z.w,16,1000,100),h:n(z.h,4,3000,60)};
  if(o.k==='text'){o.st=['kick','title','sub','by','h','body','cap','quote'].includes(z.st)?z.st:'body';o.t=S(z.t,10000)}if(o.k==='img'){o.src=okSrc(env,z.src)?z.src:'';o.ft=z.ft==='contain'?'contain':'cover';o.bd=z.bd!==false}
- if(z.fs)o.fs=n(z.fs,1,120,0);if(['l','c','r','j'].includes(z.al))o.al=z.al;if(o.k==='box')o.bd=z.bd===true;if(/^#[0-9a-f]{6}$/i.test(z.c||''))o.c=z.c;if(/^#[0-9a-f]{6}$/i.test(z.bg||''))o.bg=z.bg;if(typeof z.b==='boolean')o.b=z.b;if(typeof z.i==='boolean')o.i=z.i;if(z.lk===true)o.lk=true;return o});
-function mkp(b,env){const pages=(Array.isArray(b.pages)?b.pages:[]).slice(0,20).map(g=>({h:Math.min(6000,Math.max(300,Math.round(+(g||{}).h)||600)),zones:cz((g||{}).zones,env)})),z0=pages[0]?pages[0].zones:[],f=s=>(z0.find(z=>z.st===s)||{}).t||'';
+ if(z.fs)o.fs=n(z.fs,1,120,0);if(['l','c','r','j'].includes(z.al))o.al=z.al;if(o.k==='box')o.bd=z.bd===true;if(/^#[0-9a-f]{6}$/i.test(z.c||''))o.c=z.c;if(/^#[0-9a-f]{6}$/i.test(z.bg||''))o.bg=z.bg;if(typeof z.b==='boolean')o.b=z.b;if(typeof z.i==='boolean')o.i=z.i;if(z.lk===true)o.lk=true;
+ for(const[k,lo,hi]of[['rot',-45,45],['op',5,100],['lh',.8,3],['ls',-2,20],['ox',0,100],['oy',0,100],['zm',1,4],['rd',0,60],['nw',1,9000],['nh',1,9000]]){const v=+z[k];if(isFinite(v)&&z[k]!==null&&z[k]!==''&&v>=lo&&v<=hi)o[k]=Math.round(v*100)/100}
+ return o});
+const PGN=env=>g=>{g=g||{};const o={h:Math.min(6000,Math.max(300,Math.round(+g.h)||600)),zones:cz(g.zones,env)};if(/^#[0-9a-f]{6}$/i.test(g.acc||''))o.acc=g.acc;if(/^#[0-9a-f]{6}$/i.test(g.pap||''))o.pap=g.pap;return o};
+function mkp(b,env){const pages=(Array.isArray(b.pages)?b.pages:[]).slice(0,20).map(PGN(env)),z0=pages[0]?pages[0].zones:[],f=s=>(z0.find(z=>z.st===s)||{}).t||'';
  if(!TY.includes(b.type))return{err:'Type invalide'};if(!f('title').trim())return{err:'Titre manquant'};const th=String(b.thumb||'');
  return{d:{type:b.type,edition:S(b.edition),dtxt:S(b.dtxt),slogan:S(b.slogan),foot:S(b.foot),thumb:/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+\/=]+$/.test(th)&&th.length<300000?th:'',pages,kicker:S(f('kick')),title:S(f('title')),sub:S(f('sub')),author:S(f('by'))}}}
 async function notify(env,db,origin,p){try{const w=((await db.get('settings','key=eq.webhook&select=value'))[0]||{}).value;if(!/^https:\/\/(discord|discordapp)\.com\/api\/webhooks\//.test(w||''))return false;
@@ -75,7 +78,7 @@ async fetch(req,env,ctx){const url=new URL(req.url),P=url.pathname,M=req.method;
  // ---- modèles de mise en page partagés
  if(is('GET',/^\/api\/templates$/)){if(!ok('staff'))return NO();return J(((await db.get('settings','key=eq.templates&select=value'))[0]||{}).value||[])}
  if(is('POST',/^\/api\/templates$/)){if(!ok('staff'))return NO();const b=await body(),all=((await db.get('settings','key=eq.templates&select=value'))[0]||{}).value||[],name=S(b.name,60).trim(),
-  pages=(Array.isArray(b.pages)?b.pages:[]).slice(0,10).map(g=>({h:Math.min(6000,Math.max(300,Math.round(+(g||{}).h)||600)),zones:cz((g||{}).zones,env)}));
+  pages=(Array.isArray(b.pages)?b.pages:[]).slice(0,10).map(PGN(env));
   if(!name||!pages.length)return E('Nom ou contenu manquant');const nt={id:hex(6),name,type:TY.includes(b.type)?b.type:'journal',by:u.id,pages},next=[...all.filter(a=>a.name!==name),nt].slice(-40);
   if(JSON.stringify(next).length>900000)return E('Trop de modèles ou modèles trop lourds : supprime-en quelques-uns');await db.ins('settings',{key:'templates',value:next},'resolution=merge-duplicates,return=minimal');return J({ok:1})}
  if(is('DELETE',/^\/api\/templates\/([^/]+)$/)){if(!ok('staff'))return NO();const all=((await db.get('settings','key=eq.templates&select=value'))[0]||{}).value||[],tt=all.find(a=>a.id===x[1]);if(!tt)return E('Introuvable',404);
